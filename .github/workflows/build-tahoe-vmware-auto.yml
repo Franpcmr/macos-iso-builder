@@ -1,0 +1,42 @@
+name: Build Tahoe VMware ISO
+
+on:
+  push:
+    paths:
+      - '.github/trigger-tahoe-vmware'
+  workflow_dispatch:
+
+jobs:
+  build-tahoe-iso:
+    runs-on: macos-15-intel
+    timeout-minutes: 80
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Build Tahoe ISO
+        id: build
+        run: |
+          ./mkmaciso Tahoe iso
+          echo "image_name=$(basename *.iso)" >> $GITHUB_OUTPUT
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: macOS_Tahoe_VMware_iso
+          path: ${{ steps.build.outputs.image_name }}
+          compression-level: 0
+          retention-days: 15
+          if-no-files-found: error
+
+      - name: Summary
+        if: always()
+        run: |
+          if [ "${{ steps.build.outcome }}" = "success" ]; then
+            echo "## Tahoe ISO build completed" >> $GITHUB_STEP_SUMMARY
+            echo "Artifact: macOS_Tahoe_VMware_iso" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "## Tahoe ISO build failed" >> $GITHUB_STEP_SUMMARY
+            echo "Re-run the workflow to try another runner." >> $GITHUB_STEP_SUMMARY
+          fi
